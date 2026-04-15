@@ -18,13 +18,14 @@ const Garantia = () => {
     e.preventDefault();
     if (!serial.trim()) return;
     const w = checkWarranty(serial.trim());
-    setResult(w || 'not_found');
+    setResult(w);
+    setNotFound(!w);
     setSearched(true);
   };
 
   const renderResult = () => {
     if (!searched) return null;
-    if (result === 'not_found') {
+    if (notFound) {
       return (
         <Card className="glass-card mt-8">
           <CardContent className="py-8 text-center">
@@ -37,7 +38,7 @@ const Garantia = () => {
       );
     }
 
-    if (!result || result === 'not_found') return null;
+    if (!result) return null;
 
     const exp = getWarrantyExpiration(result);
     const days = getDaysRemaining(result);
