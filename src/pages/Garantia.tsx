@@ -10,7 +10,8 @@ import { checkWarranty, getWarrantyExpiration, getDaysRemaining, isWarrantyActiv
 
 const Garantia = () => {
   const [serial, setSerial] = useState('');
-  const [result, setResult] = useState<Warranty | null | 'not_found'>(null);
+  const [result, setResult] = useState<Warranty | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [searched, setSearched] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
