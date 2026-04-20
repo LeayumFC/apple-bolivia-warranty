@@ -1,39 +1,3 @@
-export async function getWarranties() {
-  const res = await fetch('/api/warranties');
-  return res.json();
-}
-
-export async function createWarranty(data: any) {
-  const res = await fetch('/api/warranties', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error);
-  }
-  return res.json();
-}
-
-export async function updateWarranty(id: string, data: any) {
-  const res = await fetch(`/api/warranties/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
-export async function deleteWarranty(id: string) {
-  await fetch(`/api/warranties/${id}`, { method: 'DELETE' });
-}
-
-export async function checkWarranty(serial: string) {
-  const res = await fetch(`/api/warranty/check?serial=${serial}`);
-  if (res.status === 404) return null;
-  return res.json();
-}
 export interface Warranty {
   id: string;
   product_type: string;
@@ -62,6 +26,71 @@ export interface Warranty {
   notes?: string;
   status: 'Unsold' | 'Sold';
   created_at: string;
+}
+
+const STORAGE_KEY = 'apple_bolivia_warranties';
+
+function readAll(): Warranty[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAll(items: Warranty[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+export async function getWarranties(): Promise<Warranty[]> {
+  return readAll().sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function createWarranty(data: Partial<Warranty>): Promise<Warranty> {
+  const items = readAll();
+  if (items.some(w => w.serial_number === data.serial_number)) {
+    throw new Error('Ya existe una garantía con ese número de serie');
+  }
+  const newItem: Warranty = {
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    status: 'Unsold',
+    true_tone: false, face_id: false, touch_id: false, original_display: false,
+    no_screen_scratches: false, no_body_dents: false, buttons_functional: false,
+    cameras_functional: false, charging_port_functional: false,
+    product_type: '', model: '', serial_number: '', color: '', storage: '',
+    condition: 'New',
+    ...data,
+  } as Warranty;
+  items.push(newItem);
+  writeAll(items);
+  return newItem;
+}
+
+export async function updateWarranty(id: string, data: Partial<Warranty>): Promise<Warranty | null> {
+  const items = readAll();
+  const idx = items.findIndex(w => w.id === id);
+  if (idx === -1) return null;
+  const updated = { ...items[idx], ...data };
+  if (updated.status === 'Sold' && updated.sale_date && !updated.warranty_code) {
+    const dateStr = updated.sale_date.replace(/-/g, '');
+    updated.warranty_code = `APB-${updated.serial_number}-${dateStr}`;
+  }
+  items[idx] = updated;
+  writeAll(items);
+  return updated;
+}
+
+export async function deleteWarranty(id: string): Promise<void> {
+  writeAll(readAll().filter(w => w.id !== id));
+}
+
+export async function checkWarranty(serial: string): Promise<Warranty | null> {
+  const items = readAll();
+  return items.find(w => w.serial_number === serial && w.status === 'Sold') || null;
 }
 
 export function getWarrantyExpiration(warranty: Warranty): Date | null {
