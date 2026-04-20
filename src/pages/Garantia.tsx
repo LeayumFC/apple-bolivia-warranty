@@ -14,10 +14,10 @@ const Garantia = () => {
   const [notFound, setNotFound] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!serial.trim()) return;
-    const w = checkWarranty(serial.trim());
+    const w = await checkWarranty(serial.trim());
     setResult(w);
     setNotFound(!w);
     setSearched(true);
